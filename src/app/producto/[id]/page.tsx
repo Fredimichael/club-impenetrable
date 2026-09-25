@@ -1,0 +1,313 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { 
+  ArrowLeft, 
+  MessageCircle, 
+  Share2, 
+  CheckCircle2, 
+  XCircle, 
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Compass
+} from "lucide-react";
+import { Product } from "@/types";
+import { DataService } from "@/lib/data-service";
+import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl } from "@/lib/utils";
+import { CLUB_NAME, DEFAULT_WHATSAPP_NUMBER } from "@/lib/constants";
+import { ShareModal } from "@/components/catalog/ShareModal";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { ProductCard } from "@/components/catalog/ProductCard";
+
+export default function ProductDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const productId = params?.id as string;
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // Share Modal State
+  const [shareData, setShareData] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    price?: number;
+    description?: string;
+  }>({
+    isOpen: false,
+    title: "",
+    url: "",
+  });
+
+  useEffect(() => {
+    async function loadProduct() {
+      setLoading(true);
+      try {
+        const prod = await DataService.getProductById(productId);
+        setProduct(prod);
+        if (prod) {
+          const all = await DataService.getProducts();
+          const related = all
+            .filter((p) => p.category === prod.category && p.id !== prod.id)
+            .slice(0, 4);
+          setRelatedProducts(related);
+        }
+      } catch (err) {
+        console.error("Error loading product", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (productId) {
+      loadProduct();
+    }
+  }, [productId]);
+
+  const openShare = (title: string, url: string, price: number, description?: string) => {
+    setShareData({
+      isOpen: true,
+      title,
+      url,
+      price,
+      description,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#05080e] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+          <p className="text-xs text-white/50 font-medium">Cargando producto...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#05080e] flex flex-col items-center justify-center p-6 text-center">
+        <div className="glass-panel p-8 rounded-3xl max-w-md w-full">
+          <Compass className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Producto no encontrado</h2>
+          <p className="text-xs text-white/60 mb-6">
+            El artículo que estás buscando no existe o fue retirado del catálogo.
+          </p>
+          <Link href="/" className="glass-button-primary px-6 py-3 rounded-full text-xs font-semibold inline-block">
+            Volver al Catálogo
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const images = product.images && product.images.length > 0 ? product.images : [
+    "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=80"
+  ];
+
+  const hasDiscount = product.compare_at_price && product.compare_at_price > product.price;
+  const discountPercent = hasDiscount
+    ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)
+    : 0;
+
+  const currentUrl = typeof window !== "undefined" ? window.location.href : getCatalogShareUrl(`/producto/${product.id}`);
+
+  const handleWhatsAppBuy = () => {
+    const phone = product.whatsapp_number || DEFAULT_WHATSAPP_NUMBER;
+    const msg = createWhatsAppMessage(product.title, product.price, currentUrl);
+    window.open(getWhatsAppShareUrl(phone, msg), "_blank");
+  };
+
+  return (
+    <div className="min-h-screen bg-[#05080e] text-white flex flex-col relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="bg-ambient-orb-1 top-20 -left-40" />
+      <div className="bg-ambient-orb-2 top-96 -right-40" />
+      <div className="bg-ambient-orb-3 bottom-40 left-1/3" />
+
+      <Navbar onOpenShareModal={() => openShare(product.title, currentUrl, product.price, product.description)} />
+
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-16 w-full z-10">
+        {/* Back Link */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/70 hover:text-white mb-6 glass-pill px-4 py-2 rounded-full w-fit transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Volver a todo el catálogo</span>
+        </Link>
+
+        {/* Main Product Glass Card */}
+        <div className="glass-dock rounded-3xl p-6 sm:p-10 border border-white/20 shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+          {/* Gallery */}
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full aspect-square rounded-2xl overflow-hidden glass-panel border border-white/10">
+              <Image
+                src={images[selectedImageIndex]}
+                alt={product.title}
+                fill
+                priority
+                className="object-cover object-center"
+              />
+              {hasDiscount && (
+                <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-red-500/90 text-white font-bold text-xs shadow-xl backdrop-blur-md">
+                  -{discountPercent}% OFF
+                </div>
+              )}
+
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full glass-dock text-white"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedImageIndex((prev) => (prev + 1) % images.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full glass-dock text-white"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {images.length > 1 && (
+              <div className="flex gap-2.5 overflow-x-auto pb-1">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className={`relative w-20 h-20 rounded-xl overflow-hidden shrink-0 transition-all ${
+                      idx === selectedImageIndex
+                        ? "ring-2 ring-emerald-400 scale-95"
+                        : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <Image src={img} alt={`Vista ${idx + 1}`} fill className="object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Details */}
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  {product.category}
+                </span>
+                {product.badge && (
+                  <span className="text-xs uppercase tracking-wider text-amber-300 font-semibold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    {product.badge}
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight mb-4">
+                {product.title}
+              </h1>
+
+              {/* Price card */}
+              <div className="glass-panel p-4 rounded-2xl mb-6 flex items-baseline gap-4">
+                <span className="text-3xl sm:text-4xl font-extrabold text-white">
+                  {formatPrice(product.price)}
+                </span>
+                {hasDiscount && (
+                  <span className="text-base sm:text-lg line-through text-white/40 font-mono">
+                    {formatPrice(product.compare_at_price!)}
+                  </span>
+                )}
+              </div>
+
+              {/* Stock Status */}
+              <div className="flex items-center gap-2 mb-6">
+                {product.in_stock ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <CheckCircle2 className="w-4 h-4" />
+                    En Stock - Envío inmediato
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-red-400 font-semibold px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
+                    <XCircle className="w-4 h-4" />
+                    Agotado (Consultar reserva)
+                  </span>
+                )}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2 mb-8">
+                <h3 className="text-xs uppercase tracking-wider text-white/50 font-bold">
+                  Descripción del Producto
+                </h3>
+                <p className="text-sm sm:text-base text-white/80 leading-relaxed whitespace-pre-line">
+                  {product.description}
+                </p>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-white/10">
+              <button
+                onClick={handleWhatsAppBuy}
+                className="glass-button-primary w-full sm:flex-1 py-4 rounded-2xl flex items-center justify-center gap-2.5 font-bold text-sm sm:text-base shadow-xl"
+              >
+                <MessageCircle className="w-5 h-5 text-white" />
+                <span>Pedir por WhatsApp</span>
+              </button>
+
+              <button
+                onClick={() => openShare(product.title, currentUrl, product.price, product.description)}
+                className="glass-button w-full sm:w-auto px-6 py-4 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold text-white/90 hover:text-white"
+              >
+                <Share2 className="w-4 h-4 text-cyan-400" />
+                <span>Compartir / QR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16 sm:mt-24">
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-6">
+              Otros productos en <span className="text-emerald-400 capitalize">{product.category}</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onSelect={(selected) => router.push(`/producto/${selected.id}`)}
+                  onShare={openShare}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      <Footer />
+
+      <ShareModal
+        isOpen={shareData.isOpen}
+        onClose={() => setShareData((prev) => ({ ...prev, isOpen: false }))}
+        title={shareData.title}
+        url={shareData.url}
+        price={shareData.price}
+        description={shareData.description}
+      />
+    </div>
+  );
+}
