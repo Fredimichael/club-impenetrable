@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import { CLUB_NAME, CLUB_TAGLINE } from "@/lib/constants";
 
@@ -13,6 +13,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
 export const viewport: Viewport = {
   themeColor: "#05080e",
   width: "device-width",
@@ -22,8 +27,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: `${CLUB_NAME} | ${CLUB_TAGLINE}`,
-  description: "Catálogo oficial exclusivo de Club Impenetrable. Indumentaria técnica de monte, artesanías nativas, sabores del monte chaqueño y experiencias.",
-  keywords: ["Club Impenetrable", "catálogo", "Chaco", "monte", "artesanías", "indumentaria técnica", "experiencias"],
+  description: `Catálogo oficial exclusivo de ${CLUB_NAME}. Indumentaria técnica de monte, artesanías, sabores del monte y accesorios.`,
+  keywords: [CLUB_NAME, "catálogo", "monte", "artesanías", "indumentaria técnica"],
   openGraph: {
     title: `${CLUB_NAME} - Catálogo Oficial`,
     description: CLUB_TAGLINE,
@@ -46,7 +51,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-[#05080e] text-white selection:bg-emerald-500/30 selection:text-white">
         {children}

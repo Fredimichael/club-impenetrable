@@ -27,7 +27,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm text-white/60 max-w-sm mt-1 leading-relaxed">
-              {CLUB_TAGLINE}. Descubrí prendas de monte técnico, artesanías autóctonas y sabores silvestres con la máxima calidad y trazabilidad.
+              {CLUB_TAGLINE}. Descubrí todos los productos de club de monte y realiza tus pedidos.
             </p>
             <div className="flex items-center gap-2 mt-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -62,7 +62,7 @@ export function Footer() {
           <div className="flex flex-col gap-3">
             <h4 className="text-xs uppercase tracking-wider text-white font-bold">Contacto Directo</h4>
             <p className="text-xs text-white/60 leading-relaxed">
-              Comunicate directamente con nuestro equipo para consultas de stock, pedidos especiales y envíos mayoristas.
+              Comunicate directamente con nuestro equipo para consultas de stock, pedidos especiales y envíos.
             </p>
             <button
               onClick={handleWhatsAppContact}
@@ -78,8 +78,8 @@ export function Footer() {
         <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
           <p>© {new Date().getFullYear()} {CLUB_NAME}. Todos los derechos reservados.</p>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              Desplegado en <span className="text-white font-medium">Vercel</span> & <span className="text-emerald-400 font-medium">Supabase</span>
+            <span className="flex items-center gap-1 text-white/50">
+              Catálogo de Productos
             </span>
           </div>
         </div>

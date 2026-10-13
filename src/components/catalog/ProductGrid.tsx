@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, Sparkles, X, Check, ArrowUpDown } from "lucide-react";
+import { Search, SlidersHorizontal, X, Check, ArrowUpDown } from "lucide-react";
 import { Category, FilterState, Product, SortOption } from "@/types";
+import { CLUB_NAME } from "@/lib/constants";
 import { ProductCard } from "./ProductCard";
 
 interface ProductGridProps {
@@ -86,7 +87,7 @@ export function ProductGrid({
               </span>
             </h2>
             <p className="text-xs sm:text-sm text-white/50 mt-1">
-              Explorá todos los artículos exclusivos y equipamiento de Club Impenetrable
+              Explorá todos los artículos exclusivos y equipamiento de {CLUB_NAME}
             </p>
           </div>
 
@@ -100,7 +101,7 @@ export function ProductGrid({
               placeholder="Buscar por nombre, categoría..."
               value={filterState.search}
               onChange={(e) => setFilterState((prev) => ({ ...prev, search: e.target.value }))}
-              className="w-full glass-panel pl-10 pr-9 py-2.5 rounded-2xl text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all border-white/10"
+              className="w-full glass-panel pl-10 pr-9 py-2.5 rounded-2xl text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all"
             />
             {filterState.search && (
               <button
@@ -123,14 +124,12 @@ export function ProductGrid({
                 <button
                   key={cat.id}
                   onClick={() => setFilterState((prev) => ({ ...prev, category: cat.slug }))}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                    isActive
-                      ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] border border-emerald-400/50 scale-102"
-                      : "glass-pill text-white/70 hover:text-white hover:bg-white/10"
-                  }`}
+                  className={`px-4.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${isActive
+                    ? "ios-glass-category-active"
+                    : "ios-glass-category-inactive"
+                    }`}
                 >
-                  {cat.slug === "todos" && <Sparkles className="w-3 h-3 text-amber-400" />}
-                  <span>{cat.name}</span>
+                  {cat.name}
                 </button>
               );
             })}
@@ -143,14 +142,12 @@ export function ProductGrid({
               <span className="text-xs text-white/70 font-medium">Solo en stock</span>
               <div
                 onClick={() => setFilterState((prev) => ({ ...prev, onlyInStock: !prev.onlyInStock }))}
-                className={`w-9 h-5 flex items-center rounded-full p-0.5 duration-300 cursor-pointer ${
-                  filterState.onlyInStock ? "bg-emerald-500" : "bg-white/20"
-                }`}
+                className={`w-9 h-5 flex items-center rounded-full p-0.5 duration-300 cursor-pointer ${filterState.onlyInStock ? "bg-emerald-500" : "bg-white/20"
+                  }`}
               >
                 <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
-                    filterState.onlyInStock ? "translate-x-4" : "translate-x-0"
-                  }`}
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${filterState.onlyInStock ? "translate-x-4" : "translate-x-0"
+                    }`}
                 />
               </div>
             </label>
@@ -160,7 +157,7 @@ export function ProductGrid({
               <select
                 value={filterState.sortBy}
                 onChange={(e) => setFilterState((prev) => ({ ...prev, sortBy: e.target.value as SortOption }))}
-                className="glass-panel text-xs text-white/80 font-medium px-3 py-2 pr-7 rounded-xl appearance-none focus:outline-none cursor-pointer border-white/10"
+                className="glass-panel text-xs text-white/80 font-medium px-3 py-2 pr-7 rounded-xl appearance-none focus:outline-none cursor-pointer"
               >
                 <option value="featured" className="bg-neutral-900 text-white">
                   Destacados
@@ -183,7 +180,7 @@ export function ProductGrid({
 
       {/* Products Grid */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
+        <div id="catalogo-productos" className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 scroll-mt-24">
           {filteredProducts.map((product) => (
             <ProductCard
               key={product.id}

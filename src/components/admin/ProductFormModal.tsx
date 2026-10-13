@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { X, Upload, Plus, Trash2, Sparkles, Check } from "lucide-react";
+import { X, Upload, Plus, Trash2, Sparkles, Check, RefreshCw } from "lucide-react";
 import { Category, Product } from "@/types";
 import { DataService } from "@/lib/data-service";
+import { NEW_PRODUCT_DAYS } from "@/lib/constants";
+import { isProductNew, getRemainingNewDays } from "@/lib/utils";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -29,18 +31,28 @@ export function ProductFormModal({
     category: "indumentaria",
     images: ["https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=80"],
     in_stock: true,
-    is_featured: false,
-    badge: "",
     whatsapp_number: "",
   });
 
+  const [badgeType, setBadgeType] = useState<"NUEVO" | "DESTACADO" | "NINGUNO">("NUEVO");
+  const [renewBadge, setRenewBadge] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
+    setRenewBadge(false);
     if (productToEdit) {
+      const rawBadge = (productToEdit.badge || "").trim().toUpperCase();
+      let initBadge: "NUEVO" | "DESTACADO" | "NINGUNO" = "NINGUNO";
+      if (rawBadge === "DESTACADO" || productToEdit.is_featured) {
+        initBadge = "DESTACADO";
+      } else if (rawBadge === "NUEVO") {
+        initBadge = "NUEVO";
+      }
+      setBadgeType(initBadge);
+
       setFormData({
         title: productToEdit.title,
         description: productToEdit.description,
@@ -49,11 +61,10 @@ export function ProductFormModal({
         category: productToEdit.category,
         images: productToEdit.images && productToEdit.images.length > 0 ? productToEdit.images : [""],
         in_stock: productToEdit.in_stock,
-        is_featured: productToEdit.is_featured,
-        badge: productToEdit.badge || "",
         whatsapp_number: productToEdit.whatsapp_number || "",
       });
     } else {
+      setBadgeType("NUEVO"); // Por defecto siempre Nuevo para productos nuevos
       setFormData({
         title: "",
         description: "",
@@ -62,8 +73,6 @@ export function ProductFormModal({
         category: categories.length > 1 ? categories[1].slug : "indumentaria",
         images: ["https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=80"],
         in_stock: true,
-        is_featured: false,
-        badge: "NUEVO",
         whatsapp_number: "",
       });
     }
@@ -117,6 +126,16 @@ export function ProductFormModal({
     setIsSaving(true);
     setErrorMsg("");
     try {
+      const finalBadge = badgeType === "NUEVO" ? "NUEVO" : badgeType === "DESTACADO" ? "DESTACADO" : null;
+      const isFeatured = badgeType === "DESTACADO";
+
+      let createdAt = productToEdit?.created_at;
+      if (badgeType === "NUEVO") {
+        if (!createdAt || renewBadge || (productToEdit && !isProductNew(productToEdit))) {
+          createdAt = new Date().toISOString();
+        }
+      }
+
       await DataService.saveProduct({
         id: productToEdit?.id,
         title: formData.title.trim(),
@@ -126,9 +145,10 @@ export function ProductFormModal({
         category: formData.category,
         images: formData.images.filter(Boolean),
         in_stock: formData.in_stock,
-        is_featured: formData.is_featured,
-        badge: formData.badge.trim() || null,
+        is_featured: isFeatured,
+        badge: finalBadge,
         whatsapp_number: formData.whatsapp_number.trim() || undefined,
+        created_at: createdAt,
       });
       onSaved();
       onClose();
@@ -154,7 +174,7 @@ export function ProductFormModal({
               {productToEdit ? "Editar Producto" : "Nuevo Producto"}
             </h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full glass-button text-white/60 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-full glass-button text-white/60 hover:text-white cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -215,37 +235,99 @@ export function ProductFormModal({
             </div>
           </div>
 
-          {/* Category & Badge */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">
-                Categoría *
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
-                className="w-full glass-panel px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 border-white/10"
+          {/* Category */}
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Categoría *
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
+              className="w-full glass-panel px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 border-white/10 cursor-pointer"
+            >
+              {categories
+                .filter((c) => c.slug !== "todos")
+                .map((c) => (
+                  <option key={c.id} value={c.slug} className="bg-neutral-950 text-white">
+                    {c.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* Selector de Estado / Badge: Nuevo, Destacado o Sin etiqueta */}
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1.5">
+              Estado / Etiqueta del Producto
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setBadgeType("NUEVO")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                  badgeType === "NUEVO"
+                    ? "bg-emerald-500/30 text-emerald-300 border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-400/50"
+                    : "glass-panel text-white/60 hover:text-white border-white/10 hover:border-white/20"
+                }`}
               >
-                {categories
-                  .filter((c) => c.slug !== "todos")
-                  .map((c) => (
-                    <option key={c.id} value={c.slug} className="bg-neutral-950 text-white">
-                      {c.name}
-                    </option>
-                  ))}
-              </select>
+                <span>✨ Nuevo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeType("DESTACADO")}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                  badgeType === "DESTACADO"
+                    ? "bg-amber-500/30 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.3)] ring-1 ring-amber-400/50"
+                    : "glass-panel text-white/60 hover:text-white border-white/10 hover:border-white/20"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Destacado</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeType("NINGUNO")}
+                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                  badgeType === "NINGUNO"
+                    ? "bg-white/20 text-white border-white/40 shadow-sm ring-1 ring-white/30"
+                    : "glass-panel text-white/50 hover:text-white border-white/10 hover:border-white/20"
+                }`}
+              >
+                <span>Sin etiqueta</span>
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">
-                Etiqueta / Badge (Opcional)
-              </label>
-              <input
-                type="text"
-                placeholder="Ej: NUEVO, DESTACADO, OFERTA, EXCLUSIVO"
-                value={formData.badge}
-                onChange={(e) => setFormData((prev) => ({ ...prev, badge: e.target.value }))}
-                className="w-full glass-panel px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 border-white/10 uppercase"
-              />
+            <div className="text-[11px] text-white/50 mt-1.5 flex flex-col gap-1">
+              {badgeType === "NUEVO" && (
+                <>
+                  <p>
+                    {productToEdit ? (
+                      isProductNew(productToEdit) ? (
+                        <>
+                          <span className="text-emerald-400 font-semibold">Activo:</span> Le quedan {getRemainingNewDays(productToEdit)} días de vigencia (de {NEW_PRODUCT_DAYS} días).
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-amber-400 font-semibold">Expirado:</span> El plazo de {NEW_PRODUCT_DAYS} días ya venció. Al guardar se reactivará por 30 días adicionales.
+                        </>
+                      )
+                    ) : (
+                      <>Tendrá la etiqueta 'Nuevo' durante los primeros <strong>{NEW_PRODUCT_DAYS} días</strong> desde su publicación.</>
+                    )}
+                  </p>
+                  {productToEdit && isProductNew(productToEdit) && (
+                    <button
+                      type="button"
+                      onClick={() => setRenewBadge(!renewBadge)}
+                      className={`text-[10px] text-left underline cursor-pointer flex items-center gap-1 ${renewBadge ? "text-emerald-400 font-bold" : "text-white/40 hover:text-white/70"}`}
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>{renewBadge ? "✓ Se renovará a 30 días al guardar" : "¿Renovar a 30 días completos?"}</span>
+                    </button>
+                  )}
+                </>
+              )}
+              {badgeType === "DESTACADO" && <p>Aparecerá con el tag 'Destacado' y tendrá prioridad en la tienda.</p>}
+              {badgeType === "NINGUNO" && <p>Producto estándar: no mostrará etiqueta en la tarjeta.</p>}
             </div>
           </div>
 
@@ -294,7 +376,7 @@ export function ProductFormModal({
                 <button
                   type="button"
                   onClick={handleAddImageUrl}
-                  className="glass-button px-3 py-2 rounded-xl text-xs text-white hover:text-emerald-400 shrink-0"
+                  className="glass-button px-3 py-2 rounded-xl text-xs text-white hover:text-emerald-400 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -309,7 +391,7 @@ export function ProductFormModal({
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(idx)}
-                    className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -318,25 +400,15 @@ export function ProductFormModal({
             </div>
           </div>
 
-          {/* Toggles: Stock & Featured */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <label className="glass-panel p-3 rounded-2xl flex items-center justify-between cursor-pointer">
-              <span className="text-xs font-semibold text-white">¿En Stock para entrega?</span>
+          {/* Stock Toggle */}
+          <div>
+            <label className="glass-panel p-3 rounded-2xl flex items-center justify-between cursor-pointer border border-white/10">
+              <span className="text-xs font-semibold text-white">¿En Stock para entrega inmediata?</span>
               <input
                 type="checkbox"
                 checked={formData.in_stock}
                 onChange={(e) => setFormData((prev) => ({ ...prev, in_stock: e.target.checked }))}
-                className="w-4 h-4 accent-emerald-500 rounded"
-              />
-            </label>
-
-            <label className="glass-panel p-3 rounded-2xl flex items-center justify-between cursor-pointer">
-              <span className="text-xs font-semibold text-white">¿Destacar en portada?</span>
-              <input
-                type="checkbox"
-                checked={formData.is_featured}
-                onChange={(e) => setFormData((prev) => ({ ...prev, is_featured: e.target.checked }))}
-                className="w-4 h-4 accent-emerald-500 rounded"
+                className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
               />
             </label>
           </div>
@@ -360,14 +432,14 @@ export function ProductFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="glass-button px-5 py-2.5 rounded-xl text-xs font-semibold text-white/70 hover:text-white"
+              className="glass-button px-5 py-2.5 rounded-xl text-xs font-semibold text-white/70 hover:text-white cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="glass-button-primary px-6 py-2.5 rounded-xl text-xs font-bold shadow-xl flex items-center gap-1.5"
+              className="glass-button-primary px-6 py-2.5 rounded-xl text-xs font-bold shadow-xl flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{isSaving ? "Guardando..." : "Guardar Producto"}</span>

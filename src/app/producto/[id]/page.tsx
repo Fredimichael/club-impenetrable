@@ -17,11 +17,12 @@ import {
 } from "lucide-react";
 import { Product } from "@/types";
 import { DataService } from "@/lib/data-service";
-import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl } from "@/lib/utils";
+import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew } from "@/lib/utils";
 import { CLUB_NAME, DEFAULT_WHATSAPP_NUMBER } from "@/lib/constants";
 import { ShareModal } from "@/components/catalog/ShareModal";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { ScenicBackground } from "@/components/layout/ScenicBackground";
 import { ProductCard } from "@/components/catalog/ProductCard";
 
 export default function ProductDetailPage() {
@@ -118,6 +119,10 @@ export default function ProductDetailPage() {
     ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)
     : 0;
 
+  const rawBadge = (product.badge || "").trim().toUpperCase();
+  const isDestacado = rawBadge === "DESTACADO" || product.is_featured;
+  const isNuevo = !isDestacado && isProductNew(product);
+
   const currentUrl = typeof window !== "undefined" ? window.location.href : getCatalogShareUrl(`/producto/${product.id}`);
 
   const handleWhatsAppBuy = () => {
@@ -127,11 +132,9 @@ export default function ProductDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05080e] text-white flex flex-col relative overflow-hidden">
-      {/* Ambient background glows */}
-      <div className="bg-ambient-orb-1 top-20 -left-40" />
-      <div className="bg-ambient-orb-2 top-96 -right-40" />
-      <div className="bg-ambient-orb-3 bottom-40 left-1/3" />
+    <div className="min-h-screen bg-[#05080e] text-white flex flex-col relative overflow-hidden font-navbar">
+      {/* Background escénico con desenfoque dinámico */}
+      <ScenicBackground />
 
       <Navbar onOpenShareModal={() => openShare(product.title, currentUrl, product.price, product.description)} />
 
@@ -139,41 +142,67 @@ export default function ProductDetailPage() {
         {/* Back Link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/70 hover:text-white mb-6 glass-pill px-4 py-2 rounded-full w-fit transition-all"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/80 hover:text-white mb-6 glass-pill px-4.5 py-2.5 rounded-full w-fit transition-all hover:scale-105"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Volver a todo el catálogo</span>
+          <ArrowLeft className="w-4 h-4 text-emerald-400" />
+          <span>Volver al catálogo completo</span>
         </Link>
 
         {/* Main Product Glass Card */}
-        <div className="glass-dock rounded-3xl p-6 sm:p-10 border border-white/20 shadow-2xl grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Gallery */}
-          <div className="flex flex-col gap-3">
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden glass-panel border border-white/10">
+        <div className="glass-dock rounded-[2.5rem] p-6 sm:p-10 border border-white/20 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Gallery Column: 9:16 Ratio */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="relative w-full aspect-[9/16] rounded-[2rem] overflow-hidden glass-panel border border-white/20 shadow-2xl group bg-black/40">
+              {/* Fondo desenfocado de la misma imagen para armonizar márgenes */}
+              <Image
+                src={images[selectedImageIndex]}
+                alt=""
+                aria-hidden
+                fill
+                sizes="(max-width: 1024px) 100vw, 42vw"
+                className="object-cover blur-2xl scale-125 opacity-40 pointer-events-none"
+              />
+
+              {/* Imagen principal nítida en formato 9:16 */}
               <Image
                 src={images[selectedImageIndex]}
                 alt={product.title}
                 fill
                 priority
-                className="object-cover object-center"
+                sizes="(max-width: 1024px) 100vw, 42vw"
+                className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
               />
-              {hasDiscount && (
-                <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-red-500/90 text-white font-bold text-xs shadow-xl backdrop-blur-md">
-                  -{discountPercent}% OFF
-                </div>
-              )}
 
+              {/* Badges superiores flotantes */}
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 z-10 pointer-events-none">
+                {hasDiscount ? (
+                  <div className="px-3.5 py-1.5 rounded-full bg-red-500/85 backdrop-blur-md border border-red-400/40 text-white font-bold text-xs shadow-xl tracking-wide flex items-center gap-1.5 pointer-events-auto">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                    <span>-{discountPercent}% OFF</span>
+                  </div>
+                ) : <span />}
+
+                {images.length > 1 && (
+                  <div className="px-3 py-1 rounded-full glass-pill text-[11px] font-semibold text-white/90 shadow-lg pointer-events-auto">
+                    {selectedImageIndex + 1} / {images.length}
+                  </div>
+                )}
+              </div>
+
+              {/* Controles de navegación */}
               {images.length > 1 && (
                 <>
                   <button
                     onClick={() => setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full glass-dock text-white"
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full glass-icon-btn text-white transition-all hover:scale-110 active:scale-95 shadow-xl cursor-pointer"
+                    aria-label="Foto anterior"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setSelectedImageIndex((prev) => (prev + 1) % images.length)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full glass-dock text-white"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 p-2.5 rounded-full glass-icon-btn text-white transition-all hover:scale-110 active:scale-95 shadow-xl cursor-pointer"
+                    aria-label="Foto siguiente"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -181,16 +210,17 @@ export default function ProductDetailPage() {
               )}
             </div>
 
+            {/* Miniaturas en formato 9:16 */}
             {images.length > 1 && (
-              <div className="flex gap-2.5 overflow-x-auto pb-1">
+              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none no-scrollbar">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImageIndex(idx)}
-                    className={`relative w-20 h-20 rounded-xl overflow-hidden shrink-0 transition-all ${
+                    className={`relative w-16 sm:w-20 aspect-[9/16] rounded-xl overflow-hidden shrink-0 transition-all cursor-pointer glass-panel border ${
                       idx === selectedImageIndex
-                        ? "ring-2 ring-emerald-400 scale-95"
-                        : "opacity-60 hover:opacity-100"
+                        ? "ring-2 ring-emerald-400 scale-95 border-emerald-400/80 shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                        : "border-white/10 opacity-60 hover:opacity-100 hover:border-white/30"
                     }`}
                   >
                     <Image src={img} alt={`Vista ${idx + 1}`} fill className="object-cover" />
@@ -200,68 +230,115 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Details */}
-          <div className="flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+          {/* Details Column in Liquid Glass */}
+          <div className="lg:col-span-7 flex flex-col justify-between gap-6">
+            <div className="space-y-6">
+              {/* Category, Badge, Discount & Stock Row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="ios-glass-pill-emerald px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
                   {product.category}
                 </span>
-                {product.badge && (
-                  <span className="text-xs uppercase tracking-wider text-amber-300 font-semibold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    {product.badge}
+                {isDestacado && (
+                  <span className="ios-glass-pill-amber px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Destacado</span>
                   </span>
                 )}
+                {isNuevo && (
+                  <span className="ios-glass-pill-emerald px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                    <span>Nuevo</span>
+                  </span>
+                )}
+                {hasDiscount && (
+                  <span className="ios-glass-pill-discount px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
+                    -{discountPercent}% OFF
+                  </span>
+                )}
+                <span
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm ${
+                    product.in_stock ? "ios-glass-pill-emerald" : "ios-glass-pill-ruby"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      product.in_stock ? "bg-emerald-400 animate-pulse" : "bg-red-400"
+                    }`}
+                  />
+                  <span>{product.in_stock ? "En stock" : "Agotado"}</span>
+                </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight mb-4">
+              {/* Product Title */}
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.15]">
                 {product.title}
               </h1>
 
-              {/* Price card */}
-              <div className="glass-panel p-4 rounded-2xl mb-6 flex items-baseline gap-4">
-                <span className="text-3xl sm:text-4xl font-extrabold text-white">
-                  {formatPrice(product.price)}
-                </span>
+              {/* Price Glass Card */}
+              <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-white/20 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-white/50 font-semibold block mb-1">
+                    Precio Oficial
+                  </span>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+                      {formatPrice(product.price)}
+                    </span>
+                    {hasDiscount && (
+                      <span className="text-lg sm:text-xl line-through text-white/40 font-mono">
+                        {formatPrice(product.compare_at_price!)}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 {hasDiscount && (
-                  <span className="text-base sm:text-lg line-through text-white/40 font-mono">
-                    {formatPrice(product.compare_at_price!)}
-                  </span>
+                  <div className="px-3.5 py-1.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold shadow-sm">
+                    Ahorras {formatPrice(product.compare_at_price! - product.price)}
+                  </div>
                 )}
               </div>
 
-              {/* Stock Status */}
-              <div className="flex items-center gap-2 mb-6">
-                {product.in_stock ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <CheckCircle2 className="w-4 h-4" />
-                    En Stock - Envío inmediato
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-red-400 font-semibold px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
-                    <XCircle className="w-4 h-4" />
-                    Agotado (Consultar reserva)
-                  </span>
-                )}
+              {/* Value / Trust Badges in Glass */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="glass-panel p-3.5 rounded-2xl flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div className="text-[11px] leading-tight">
+                    <span className="font-bold text-white block">Calidad Oficial</span>
+                    <span className="text-white/50">Club El Impenetrable</span>
+                  </div>
+                </div>
+                <div className="glass-panel p-3.5 rounded-2xl flex items-center gap-2.5">
+                  <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div className="text-[11px] leading-tight">
+                    <span className="font-bold text-white block">Atención Directa</span>
+                    <span className="text-white/50">Asesoramiento personal</span>
+                  </div>
+                </div>
+                <div className="glass-panel p-3.5 rounded-2xl col-span-2 sm:col-span-1 flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <div className="text-[11px] leading-tight">
+                    <span className="font-bold text-white block">Envíos & Entrega</span>
+                    <span className="text-white/50">Coordinación por WhatsApp</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Description */}
-              <div className="space-y-2 mb-8">
-                <h3 className="text-xs uppercase tracking-wider text-white/50 font-bold">
+              {/* Description Glass Box */}
+              <div className="glass-panel p-6 rounded-3xl border border-white/15 space-y-3">
+                <h3 className="text-xs uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   Descripción del Producto
                 </h3>
-                <p className="text-sm sm:text-base text-white/80 leading-relaxed whitespace-pre-line">
-                  {product.description}
+                <p className="text-sm sm:text-base text-white/90 leading-relaxed whitespace-pre-line font-normal">
+                  {product.description || "Sin descripción adicional provista."}
                 </p>
               </div>
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-white/10">
+            <div className="flex flex-col sm:flex-row items-center gap-3.5 pt-4 border-t border-white/10">
               <button
                 onClick={handleWhatsAppBuy}
-                className="glass-button-primary w-full sm:flex-1 py-4 rounded-2xl flex items-center justify-center gap-2.5 font-bold text-sm sm:text-base shadow-xl"
+                className="glass-button-primary w-full sm:flex-1 py-4 sm:py-4.5 rounded-2xl flex items-center justify-center gap-3 font-extrabold text-sm sm:text-base shadow-2xl transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <MessageCircle className="w-5 h-5 text-white" />
                 <span>Pedir por WhatsApp</span>
@@ -269,7 +346,7 @@ export default function ProductDetailPage() {
 
               <button
                 onClick={() => openShare(product.title, currentUrl, product.price, product.description)}
-                className="glass-button w-full sm:w-auto px-6 py-4 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold text-white/90 hover:text-white"
+                className="glass-button w-full sm:w-auto px-6 py-4 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold text-white/90 hover:text-white transition-all cursor-pointer"
               >
                 <Share2 className="w-4 h-4 text-cyan-400" />
                 <span>Compartir / QR</span>

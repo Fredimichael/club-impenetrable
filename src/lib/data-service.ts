@@ -200,6 +200,64 @@ export const DataService = {
     return getLocalItem<Category[]>(STORAGE_KEY_CATEGORIES, INITIAL_CATEGORIES);
   },
 
+  async saveCategory(category: Partial<Category> & { name: string; slug?: string }): Promise<Category> {
+    const slug = (category.slug || category.name)
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    const isNew = !category.id;
+    const categoryPayload: Category = {
+      id: category.id || `cat-${slug || Date.now()}`,
+      name: category.name.trim(),
+      slug: slug || `cat-${Date.now()}`,
+      icon: category.icon || "Tag",
+    };
+
+    if (this.isLiveDb() && supabase) {
+      const { data, error } = await supabase
+        .from("categories")
+        .upsert(categoryPayload)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Supabase category upsert error:", error);
+        throw new Error(error.message);
+      }
+      return data as Category;
+    }
+
+    const current = getLocalItem<Category[]>(STORAGE_KEY_CATEGORIES, INITIAL_CATEGORIES);
+    let updated: Category[];
+    if (isNew) {
+      updated = [...current, categoryPayload];
+    } else {
+      updated = current.map((c) => (c.id === categoryPayload.id ? categoryPayload : c));
+    }
+    setLocalItem(STORAGE_KEY_CATEGORIES, updated);
+    return categoryPayload;
+  },
+
+  async deleteCategory(id: string): Promise<boolean> {
+    if (this.isLiveDb() && supabase) {
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) {
+        console.error("Supabase category delete error:", error);
+        throw new Error(error.message);
+      }
+      return true;
+    }
+
+    const current = getLocalItem<Category[]>(STORAGE_KEY_CATEGORIES, INITIAL_CATEGORIES);
+    const updated = current.filter((c) => c.id !== id);
+    setLocalItem(STORAGE_KEY_CATEGORIES, updated);
+    return true;
+  },
+
   async resetDemoData(): Promise<void> {
     if (typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_KEY_PRODUCTS);

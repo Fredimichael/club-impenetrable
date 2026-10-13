@@ -10,7 +10,6 @@ import {
   Edit3, 
   ExternalLink, 
   Sparkles, 
-  Database, 
   ArrowLeft, 
   CheckCircle2, 
   AlertCircle,
@@ -18,6 +17,8 @@ import {
   Check,
   Package,
   Layers,
+  Tags,
+  Tag,
   LogOut,
   RefreshCw,
   Eye,
@@ -27,9 +28,10 @@ import { Banner, Category, Product } from "@/types";
 import { DataService } from "@/lib/data-service";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { CLUB_NAME } from "@/lib/constants";
-import { formatPrice, getCatalogShareUrl } from "@/lib/utils";
+import { formatPrice, getCatalogShareUrl, isProductNew, getRemainingNewDays } from "@/lib/utils";
 import { ProductFormModal } from "@/components/admin/ProductFormModal";
 import { BannerFormModal } from "@/components/admin/BannerFormModal";
+import { CategoryFormModal } from "@/components/admin/CategoryFormModal";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -42,7 +44,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeTab, setActiveTab] = useState<"products" | "banners" | "setup">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "banners" | "categories">("products");
   const [searchFilter, setSearchFilter] = useState("");
 
   // Modals
@@ -52,13 +54,16 @@ export default function AdminPage() {
   const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
   const [bannerToEdit, setBannerToEdit] = useState<Banner | null>(null);
 
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
+
   // Copied alert
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Check auth session
   useEffect(() => {
     // Si ya está guardada una sesión local de admin
-    const localSession = sessionStorage.getItem("club_impenetrable_admin_auth");
+    const localSession = sessionStorage.getItem("club_de_monte_admin_auth");
     if (localSession === "true") {
       setIsAuthenticated(true);
     }
@@ -117,13 +122,12 @@ export default function AdminPage() {
         }
         setIsAuthenticated(true);
       } else {
-        // En modo demo / local sin backend configurado aún
-        // Permite acceso directo con clave por defecto "admin" o cualquier clave
+        // En modo local sin backend configurado aún
         if (authPassword === "admin" || authPassword.length >= 4) {
           setIsAuthenticated(true);
-          sessionStorage.setItem("club_impenetrable_admin_auth", "true");
+          sessionStorage.setItem("club_de_monte_admin_auth", "true");
         } else {
-          setAuthError("Para modo demo, ingresá una contraseña de al menos 4 caracteres (ej: admin123).");
+          setAuthError("Ingresa una contraseña de al menos 4 caracteres.");
         }
       }
     } catch (err: any) {
@@ -135,14 +139,14 @@ export default function AdminPage() {
 
   const handleDemoAccess = () => {
     setIsAuthenticated(true);
-    sessionStorage.setItem("club_impenetrable_admin_auth", "true");
+    sessionStorage.setItem("club_de_monte_admin_auth", "true");
   };
 
   const handleLogout = async () => {
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
-    sessionStorage.removeItem("club_impenetrable_admin_auth");
+    sessionStorage.removeItem("club_de_monte_admin_auth");
     setIsAuthenticated(false);
   };
 
@@ -168,6 +172,31 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteCategory = async (id: string, name: string, slug: string) => {
+    if (slug === "todos") {
+      alert("No se puede eliminar la categoría principal 'Todos' del sistema.");
+      return;
+    }
+
+    const prodsInCat = products.filter(
+      (p) => p.category.toLowerCase() === slug.toLowerCase()
+    ).length;
+
+    let msg = `¿Estás seguro de eliminar la categoría "${name}"?`;
+    if (prodsInCat > 0) {
+      msg += `\n\nATENCIÓN: Hay ${prodsInCat} producto(s) asignados a esta categoría.`;
+    }
+
+    if (confirm(msg)) {
+      try {
+        await DataService.deleteCategory(id);
+        await loadData();
+      } catch (err: any) {
+        alert(err.message || "Error al eliminar categoría");
+      }
+    }
+  };
+
   const handleToggleStock = async (product: Product) => {
     try {
       await DataService.saveProduct({
@@ -182,9 +211,11 @@ export default function AdminPage() {
 
   const handleToggleFeatured = async (product: Product) => {
     try {
+      const willBeFeatured = !product.is_featured;
       await DataService.saveProduct({
         ...product,
-        is_featured: !product.is_featured,
+        is_featured: willBeFeatured,
+        badge: willBeFeatured ? "DESTACADO" : null,
       });
       await loadData();
     } catch (err: any) {
@@ -214,20 +245,6 @@ export default function AdminPage() {
             <p className="text-xs text-white/50 mt-1">Panel de Control & Administración</p>
           </div>
 
-          {/* Database status banner */}
-          <div className={`p-3.5 rounded-2xl mb-6 flex items-center gap-2.5 text-xs ${
-            isSupabaseConfigured 
-              ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
-              : "bg-amber-500/10 border border-amber-500/30 text-amber-200"
-          }`}>
-            <Database className="w-4 h-4 shrink-0" />
-            <span>
-              {isSupabaseConfigured
-                ? "Conexión a Supabase detectada en variables de entorno."
-                : "Modo Local / Demo activo. Puedes acceder sin clave o configurar Supabase."}
-            </span>
-          </div>
-
           {authError && (
             <div className="p-3 mb-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-200 text-xs">
               {authError}
@@ -241,7 +258,7 @@ export default function AdminPage() {
               </label>
               <input
                 type="email"
-                placeholder={isSupabaseConfigured ? "admin@clubimpenetrable.com" : "admin@demo.com"}
+                placeholder="admin@tienda.com"
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
                 className="w-full glass-panel px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 border-white/10"
@@ -278,7 +295,7 @@ export default function AdminPage() {
                 onClick={handleDemoAccess}
                 className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-4"
               >
-                Ingresar directamente en Modo Demostración
+                Ingresar directamente
               </button>
             </div>
           )}
@@ -345,38 +362,6 @@ export default function AdminPage() {
 
       {/* Main Admin Area */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 py-8 w-full z-10">
-        {/* Status Callout */}
-        <div className="glass-panel p-4 rounded-2xl mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-white/10">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-              isSupabaseConfigured 
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-            }`}>
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold text-white">
-                {isSupabaseConfigured ? "Conexión a Base de Datos Supabase: ACTIVA" : "Modo Local / Demostración Activo"}
-              </h3>
-              <p className="text-[11px] text-white/50">
-                {isSupabaseConfigured 
-                  ? "Tus productos, fotos y banners se almacenan de manera segura en PostgreSQL con RLS."
-                  : "Los cambios se guardan localmente. Para persistencia permanente gratis en Supabase, revisa la pestaña 'Configuración & SQL'."}
-              </p>
-            </div>
-          </div>
-
-          {!isSupabaseConfigured && (
-            <button
-              onClick={() => setActiveTab("setup")}
-              className="glass-button px-3.5 py-1.5 rounded-xl text-xs font-semibold text-amber-300 border-amber-500/30 hover:border-amber-400 shrink-0"
-            >
-              Ver Instrucciones SQL
-            </button>
-          )}
-        </div>
-
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="glass-panel p-4 rounded-2xl">
@@ -395,49 +380,74 @@ export default function AdminPage() {
               {banners.filter((b) => b.is_active).length}
             </p>
           </div>
-          <div className="glass-panel p-4 rounded-2xl">
-            <span className="text-xs text-white/50 font-medium">Categorías</span>
+          <div
+            onClick={() => setActiveTab("categories")}
+            className="glass-panel p-4 rounded-2xl cursor-pointer hover:border-amber-400/40 transition-colors"
+            title="Ir a gestionar categorías"
+          >
+            <span className="text-xs text-white/50 font-medium flex items-center justify-between">
+              <span>Categorías</span>
+              <span className="text-[10px] text-amber-300">Gestionar →</span>
+            </span>
             <p className="text-2xl font-extrabold text-amber-300 mt-1 font-mono">{categories.length}</p>
           </div>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex items-center gap-2 pb-6 border-b border-white/10 mb-6">
-          <button
-            onClick={() => setActiveTab("products")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "products"
-                ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                : "glass-button text-white/70 hover:text-white"
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>Productos ({products.length})</span>
-          </button>
+        <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "products"
+                  ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                  : "glass-button text-white/70 hover:text-white"
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Productos ({products.length})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab("banners")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "banners"
-                ? "bg-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-                : "glass-button text-white/70 hover:text-white"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Banners ({banners.length})</span>
-          </button>
+            <button
+              onClick={() => setActiveTab("banners")}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "banners"
+                  ? "bg-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                  : "glass-button text-white/70 hover:text-white"
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Banners ({banners.length})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab("setup")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "setup"
-                ? "bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.4)]"
-                : "glass-button text-white/70 hover:text-white"
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span>Configuración & Supabase</span>
-          </button>
+            <button
+              onClick={() => setActiveTab("categories")}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "categories"
+                  ? "bg-amber-500 text-black font-bold shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+                  : "glass-button text-white/70 hover:text-white"
+              }`}
+            >
+              <Tags className="w-4 h-4" />
+              <span>Categorías ({categories.length})</span>
+            </button>
+          </div>
+
+          {!isSupabaseConfigured && (
+            <button
+              onClick={async () => {
+                if (confirm("¿Restablecer el catálogo a los productos de ejemplo iniciales?")) {
+                  await DataService.resetDemoData();
+                  await loadData();
+                  alert("Catálogo restablecido.");
+                }
+              }}
+              className="text-[11px] text-white/30 hover:text-amber-300 transition-colors"
+              title="Restablecer productos de ejemplo"
+            >
+              Restablecer productos base
+            </button>
+          )}
         </div>
 
         {/* TAB 1: PRODUCTS */}
@@ -494,10 +504,28 @@ export default function AdminPage() {
                               </div>
                               <div>
                                 <span className="font-semibold text-white line-clamp-1">{p.title}</span>
-                                {p.badge && (
-                                  <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                                    {p.badge}
+                                {p.badge?.toUpperCase() === "DESTACADO" && (
+                                  <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 inline-flex items-center gap-1 mt-0.5">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    <span>Destacado</span>
                                   </span>
+                                )}
+                                {p.badge?.toUpperCase() === "NUEVO" && (
+                                  isProductNew(p) ? (
+                                    <span 
+                                      className="text-[10px] text-emerald-300 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-flex items-center gap-1 mt-0.5"
+                                      title={`Etiqueta Nuevo activa: le quedan ${getRemainingNewDays(p)} días`}
+                                    >
+                                      ✨ Nuevo ({getRemainingNewDays(p)}d)
+                                    </span>
+                                  ) : (
+                                    <span 
+                                      className="text-[10px] text-white/40 font-medium bg-white/5 px-2 py-0.5 rounded-full border border-white/10 inline-flex items-center gap-1 mt-0.5"
+                                      title="Etiqueta expirada después del período de 30 días"
+                                    >
+                                      ✨ Nuevo (Expirado)
+                                    </span>
+                                  )
                                 )}
                               </div>
                             </div>
@@ -662,60 +690,97 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* TAB 3: SETUP & SUPABASE */}
-        {activeTab === "setup" && (
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl max-w-3xl space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Database className="w-5 h-5 text-emerald-400" />
-                <span>Configuración de Base de Datos (Supabase Gratuito)</span>
-              </h3>
-              <p className="text-xs sm:text-sm text-white/60 mt-1 leading-relaxed">
-                Supabase te brinda base de datos PostgreSQL, almacenamiento de imágenes y autenticación totalmente gratis.
-              </p>
-            </div>
-
-            <div className="space-y-4 text-xs sm:text-sm text-white/80">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                <p className="font-semibold text-emerald-400">Paso 1: Crear proyecto en Supabase</p>
-                <p className="text-white/60 text-xs">
-                  Entrá en <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline">supabase.com</a> y creá una cuenta gratuita. Crea una organización y un proyecto nuevo (ej: "Club Impenetrable").
+        {/* TAB 3: CATEGORIES */}
+        {activeTab === "categories" && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <p className="text-xs sm:text-sm text-white/70">
+                  Gestiona las categorías que ven tus clientes para filtrar los productos en el catálogo.
+                </p>
+                <p className="text-[11px] text-white/40 mt-0.5">
+                  Las nuevas categorías aparecerán automáticamente en los filtros y en el formulario de alta de productos.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                <p className="font-semibold text-emerald-400">Paso 2: Ejecutar el script SQL</p>
-                <p className="text-white/60 text-xs">
-                  En el menú de tu proyecto de Supabase, entra a <strong className="text-white">SQL Editor</strong>, abre el archivo que creamos llamado <code className="text-amber-300">supabase-schema.sql</code> en la raíz de tu proyecto, copia todo su contenido, pégalo allí y haz clic en <strong className="text-white">Run</strong>. ¡Esto creará las tablas, la seguridad RLS y el bucket de fotos automáticamente!
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                <p className="font-semibold text-emerald-400">Paso 3: Obtener claves y configurar en Vercel o local</p>
-                <p className="text-white/60 text-xs">
-                  En Supabase ve a <strong className="text-white">Project Settings &gt; API</strong> y copia tu <code className="text-cyan-300">Project URL</code> y tu clave <code className="text-cyan-300">anon / public</code>.
-                  Agrégalas a tu archivo <code className="text-amber-300">.env.local</code> o en las variables de entorno de tu proyecto en <strong className="text-white">Vercel</strong>:
-                </p>
-                <pre className="p-3 rounded-xl bg-black/60 font-mono text-[11px] text-emerald-300 overflow-x-auto">
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co&#10;NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-clave-anon
-                </pre>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs text-white/50">¿Quieres restablecer la demo local?</span>
               <button
-                onClick={async () => {
-                  if (confirm("¿Restablecer los datos demo a los valores originales?")) {
-                    await DataService.resetDemoData();
-                    await loadData();
-                    alert("Datos restablecidos con éxito.");
-                  }
+                onClick={() => {
+                  setCategoryToEdit(null);
+                  setIsCategoryModalOpen(true);
                 }}
-                className="glass-button px-4 py-2 rounded-xl text-xs font-semibold text-amber-300 hover:text-amber-200 border-amber-500/30"
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all cursor-pointer shrink-0"
               >
-                Restablecer Catálogo Demo
+                <Plus className="w-4 h-4" />
+                <span>Nueva Categoría</span>
               </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map((c) => {
+                const isSystemDefault = c.slug === "todos";
+                const prodsCount = products.filter(
+                  (p) => p.category.toLowerCase() === c.slug.toLowerCase()
+                ).length;
+
+                return (
+                  <div
+                    key={c.id}
+                    className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between hover:border-white/20 transition-all"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-400/20 flex items-center justify-center text-amber-300 shrink-0">
+                            <Tag className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-bold text-white truncate">{c.name}</h4>
+                            <p className="text-[11px] text-white/40 font-mono truncate">
+                              slug: {c.slug}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isSystemDefault && (
+                          <span className="glass-pill px-2 py-0.5 rounded-full text-[9px] font-bold text-white/50 border border-white/10 shrink-0">
+                            General
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                        <span className="text-white/50">Productos asociados:</span>
+                        <span className="font-mono font-bold text-white">
+                          {isSystemDefault ? `${products.length} (total)` : prodsCount}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setCategoryToEdit(c);
+                          setIsCategoryModalOpen(true);
+                        }}
+                        className="p-2 rounded-xl glass-button text-amber-300 hover:text-amber-200"
+                        title="Editar categoría"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {!isSystemDefault && (
+                        <button
+                          onClick={() => handleDeleteCategory(c.id, c.name, c.slug)}
+                          className="p-2 rounded-xl glass-button text-red-400 hover:text-red-300"
+                          title="Eliminar categoría"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -735,6 +800,15 @@ NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co&#10;NEXT_PUBLIC_SUPABAS
         isOpen={isBannerModalOpen}
         onClose={() => setIsBannerModalOpen(false)}
         bannerToEdit={bannerToEdit}
+        onSaved={loadData}
+      />
+
+      {/* Category Form Modal */}
+      <CategoryFormModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categoryToEdit={categoryToEdit}
+        existingCategories={categories}
         onSaved={loadData}
       />
     </div>

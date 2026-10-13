@@ -1,8 +1,11 @@
 import { Banner, Category, Product } from "@/types";
 
 export const DEFAULT_WHATSAPP_NUMBER = "5493624000000"; // Reemplazar con el número del club
-export const CLUB_NAME = "Club Impenetrable";
-export const CLUB_TAGLINE = "Catálogo Exclusivo & Experiencias Salvajes";
+export const CLUB_NAME = "Club de Monte";
+export const CLUB_TAGLINE = "Catálogo Oficial";
+
+// Cantidad de días que dura el badge "NUEVO" antes de expirar automáticamente
+export const NEW_PRODUCT_DAYS = 30;
 
 export const INITIAL_CATEGORIES: Category[] = [
   { id: "cat-all", name: "Todos", slug: "todos", icon: "Sparkles" },
@@ -16,9 +19,9 @@ export const INITIAL_CATEGORIES: Category[] = [
 export const INITIAL_BANNERS: Banner[] = [
   {
     id: "banner-1",
-    title: "Nueva Colección El Impenetrable",
-    subtitle: "Prendas técnicas y artesanías nativas diseñadas para resistir y destacar.",
-    image_url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80",
+    title: "Colección Monte 2026",
+    subtitle: "Prendas de monte técnico, artesanías y equipamiento forjado para la aventura.",
+    image_url: "/images/_image.webp",
     button_text: "Explorar Colección",
     button_link: "#catalogo",
     badge: "TEMPORADA 2026",
@@ -27,10 +30,10 @@ export const INITIAL_BANNERS: Banner[] = [
   },
   {
     id: "banner-2",
-    title: "Miel Silvestre & Cacao Nativo",
-    subtitle: "Edición limitada cosechada de manera sustentable en el corazón del monte chaqueño.",
-    image_url: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=1600&q=80",
-    button_text: "Ver Gourmet",
+    title: "Cuchillería & Maderas Nobles",
+    subtitle: "Cuchillería artesanal forjada a mano en quebracho colorado y materiales seleccionados.",
+    image_url: "/images/ce72f487-17b2-4265-8c64-115c0957e316_desktop.webp",
+    button_text: "Ver Artesanías",
     button_link: "#catalogo",
     badge: "EDICIÓN LIMITADA",
     is_active: true,
@@ -38,12 +41,12 @@ export const INITIAL_BANNERS: Banner[] = [
   },
   {
     id: "banner-3",
-    title: "Expediciones VIP & Pases de Campo",
-    subtitle: "Accedé a travesías guiadas exclusivas con astrofotografía y gastronomía de autor.",
-    image_url: "https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=1600&q=80",
-    button_text: "Reservar Experiencia",
+    title: "Sabores del Monte",
+    subtitle: "Miel pura y delicias autóctonas de producción local sustentable.",
+    image_url: "/images/_image (3).webp",
+    button_text: "Descubrir Gourmet",
     button_link: "#catalogo",
-    badge: "MEMBRESÍA CLUB",
+    badge: "SABORES NATIVOS",
     is_active: true,
     order: 3,
   },
@@ -65,6 +68,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     is_featured: true,
     badge: "DESTACADO",
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-2",
@@ -79,12 +83,13 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     in_stock: true,
     is_featured: true,
-    badge: "ARTESANAL",
+    badge: "DESTACADO",
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-3",
-    title: "Miel Negra Orgánica del Impenetrable (500g)",
+    title: "Miel Negra Orgánica de Monte (500g)",
     description: "Cosecha silvestre de abejas nativas en flora virgen de algarrobo y mistol. Sabor intenso con notas ahumadas y propiedades nutricionales excepcionales.",
     price: 18500,
     compare_at_price: null,
@@ -93,9 +98,10 @@ export const INITIAL_PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=1000&q=80"
     ],
     in_stock: true,
-    is_featured: true,
-    badge: "100% ORGÁNICO",
+    is_featured: false,
+    badge: null,
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-4",
@@ -110,8 +116,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     in_stock: true,
     is_featured: false,
-    badge: "MOLLE SYSTEM",
+    badge: null,
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-5",
@@ -125,12 +132,13 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     in_stock: true,
     is_featured: false,
-    badge: "MÁS VENDIDO",
+    badge: "NUEVO",
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-6",
-    title: "Gorra Trucker Club Impenetrable - Edición Nocturna",
+    title: "Gorra Trucker Club de Monte - Edición Nocturna",
     description: "Parche frontal bordado de alta densidad en relieve. Malla respirable ultra-durable y broche regulable snapback. Talle único adaptable.",
     price: 24000,
     compare_at_price: null,
@@ -140,8 +148,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     in_stock: true,
     is_featured: false,
-    badge: "ORIGINAL CLUB",
+    badge: null,
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-7",
@@ -155,8 +164,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     in_stock: true,
     is_featured: true,
-    badge: "EXPERIENCIA EXCLUSIVA",
+    badge: "DESTACADO",
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "prod-8",
@@ -170,7 +180,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     in_stock: false,
     is_featured: false,
-    badge: "PIEZA ÚNICA",
+    badge: null,
     whatsapp_number: DEFAULT_WHATSAPP_NUMBER,
+    created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
   }
 ];
