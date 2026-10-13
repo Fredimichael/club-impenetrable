@@ -4,8 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { MessageCircle, Share2, Sparkles } from "lucide-react";
 import { Product } from "@/types";
-import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew } from "@/lib/utils";
-import { DEFAULT_WHATSAPP_NUMBER } from "@/lib/constants";
+import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew, getProductWhatsAppPhone } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
@@ -31,7 +30,7 @@ export function ProductCard({ product, onSelect, onShare }: ProductCardProps) {
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = product.whatsapp_number || DEFAULT_WHATSAPP_NUMBER;
+    const phone = getProductWhatsAppPhone(product);
     const msg = createWhatsAppMessage(product.title, product.price, productUrl);
     window.open(getWhatsAppShareUrl(phone, msg), "_blank");
   };

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X, Upload, Plus, Trash2, Sparkles, Check, RefreshCw } from "lucide-react";
 import { Category, Product } from "@/types";
 import { DataService } from "@/lib/data-service";
-import { NEW_PRODUCT_DAYS } from "@/lib/constants";
+import { NEW_PRODUCT_DAYS, DEFAULT_WHATSAPP_NUMBER } from "@/lib/constants";
 import { isProductNew, getRemainingNewDays } from "@/lib/utils";
 
 interface ProductFormModalProps {
@@ -61,7 +61,7 @@ export function ProductFormModal({
         category: productToEdit.category,
         images: productToEdit.images && productToEdit.images.length > 0 ? productToEdit.images : [""],
         in_stock: productToEdit.in_stock,
-        whatsapp_number: productToEdit.whatsapp_number || "",
+        whatsapp_number: productToEdit.whatsapp_number === "5493624000000" ? "" : (productToEdit.whatsapp_number || ""),
       });
     } else {
       setBadgeType("NUEVO"); // Por defecto siempre Nuevo para productos nuevos
@@ -416,11 +416,11 @@ export function ProductFormModal({
           {/* Custom WhatsApp (Optional) */}
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-1">
-              WhatsApp específico (Opcional, dejar vacío para usar el principal del club)
+              WhatsApp específico (Opcional, dejar vacío para usar el del club: {DEFAULT_WHATSAPP_NUMBER})
             </label>
             <input
               type="text"
-              placeholder="Ej: 5493624000000"
+              placeholder={`Ej: ${DEFAULT_WHATSAPP_NUMBER}`}
               value={formData.whatsapp_number}
               onChange={(e) => setFormData((prev) => ({ ...prev, whatsapp_number: e.target.value }))}
               className="w-full glass-panel px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white focus:outline-none border-white/10"

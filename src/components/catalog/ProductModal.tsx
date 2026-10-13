@@ -15,8 +15,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { Product } from "@/types";
-import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew } from "@/lib/utils";
-import { DEFAULT_WHATSAPP_NUMBER } from "@/lib/constants";
+import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew, getProductWhatsAppPhone } from "@/lib/utils";
 
 interface ProductModalProps {
   product: Product | null;
@@ -53,7 +52,7 @@ export function ProductModal({
   const productUrl = getCatalogShareUrl(`/producto/${product.id}`);
 
   const handleWhatsAppBuy = () => {
-    const phone = product.whatsapp_number || DEFAULT_WHATSAPP_NUMBER;
+    const phone = getProductWhatsAppPhone(product);
     const msg = createWhatsAppMessage(product.title, product.price, productUrl);
     window.open(getWhatsAppShareUrl(phone, msg), "_blank");
   };

@@ -1,7 +1,9 @@
 import { Banner, Category, Product } from "@/types";
 
-export const DEFAULT_WHATSAPP_NUMBER = "5493624000000"; // Reemplazar con el número del club
-export const CLUB_NAME = "Club de Monte";
+export const DEFAULT_WHATSAPP_NUMBER =
+  process.env.NEXT_PUBLIC_DEFAULT_WHATSAPP || "3644521338";
+export const CLUB_NAME =
+  process.env.NEXT_PUBLIC_SITE_NAME || "Club de Monte";
 export const CLUB_TAGLINE = "Catálogo Oficial";
 
 // Cantidad de días que dura el badge "NUEVO" antes de expirar automáticamente

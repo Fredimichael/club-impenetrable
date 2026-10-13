@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import { Product } from "@/types";
 import { DataService } from "@/lib/data-service";
-import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew } from "@/lib/utils";
-import { CLUB_NAME, DEFAULT_WHATSAPP_NUMBER } from "@/lib/constants";
+import { formatPrice, createWhatsAppMessage, getWhatsAppShareUrl, getCatalogShareUrl, isProductNew, getProductWhatsAppPhone } from "@/lib/utils";
+import { CLUB_NAME } from "@/lib/constants";
 import { ShareModal } from "@/components/catalog/ShareModal";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -126,7 +126,7 @@ export default function ProductDetailPage() {
   const currentUrl = typeof window !== "undefined" ? window.location.href : getCatalogShareUrl(`/producto/${product.id}`);
 
   const handleWhatsAppBuy = () => {
-    const phone = product.whatsapp_number || DEFAULT_WHATSAPP_NUMBER;
+    const phone = getProductWhatsAppPhone(product);
     const msg = createWhatsAppMessage(product.title, product.price, currentUrl);
     window.open(getWhatsAppShareUrl(phone, msg), "_blank");
   };
