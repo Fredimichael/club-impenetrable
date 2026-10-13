@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { X, Copy, Check, MessageCircle, Send, Share2 } from "lucide-react";
+import { X, Copy, Check, MessageCircle, Share2 } from "lucide-react";
 import { CLUB_NAME } from "@/lib/constants";
 
 interface ShareModalProps {
@@ -147,26 +147,16 @@ export function ShareModal({
           </button>
         </div>
 
-        {/* Direct Social Buttons */}
-        <div className="grid grid-cols-2 gap-2.5">
+        {/* Direct Social Button: WhatsApp */}
+        <div>
           <a
             href={`https://wa.me/?text=${shareText}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-button p-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-emerald-300 hover:text-emerald-200 border-emerald-500/20 hover:border-emerald-500/40"
+            className="glass-button w-full p-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-emerald-300 hover:text-emerald-200 border-emerald-500/20 hover:border-emerald-500/40 transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
             <MessageCircle className="w-4 h-4 text-emerald-400" />
-            <span>WhatsApp</span>
-          </a>
-
-          <a
-            href={`https://t.me/share/url?url=${encodedUrl}&text=${shareText}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="glass-button p-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200 border-cyan-500/20 hover:border-cyan-500/40"
-          >
-            <Send className="w-4 h-4 text-cyan-400" />
-            <span>Telegram</span>
+            <span>Compartir por WhatsApp</span>
           </a>
         </div>
 
